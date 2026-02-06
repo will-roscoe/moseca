@@ -11,10 +11,7 @@ from demucs.audio import save_audio
 from demucs.pretrained import get_model_from_args, ModelLoadingError
 from demucs.separate import load_track
 
-import streamlit as st
 
-
-@st.cache_data(show_spinner=False)
 def separator(
     tracks: List[Path],
     out: Path,
@@ -28,6 +25,7 @@ def separator(
     mp3: bool,
     mp3_bitrate: int,
     verbose: bool,
+    device: str|int = None,
     *args,
     **kwargs,
 ):
@@ -59,11 +57,11 @@ def separator(
         # Number of jobs. This can increase memory usage but will be much faster when
         # multiple cores are available.
         jobs = os.cpu_count()
-
-    if th.cuda.is_available():
-        device = "cuda"
-    else:
-        device = "cpu"
+    if device is None:
+        if th.cuda.is_available():
+            device = "cuda"
+        else:
+            device = "cpu"
     args = argparse.Namespace()
     args.tracks = tracks
     args.out = out

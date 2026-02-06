@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from app.service.vocal_remover import layers
+from . import layers
 
 
 class BaseNet(nn.Module):

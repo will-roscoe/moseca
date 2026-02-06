@@ -143,6 +143,7 @@ cython_debug/
 .DS_Store
 Makefile
 baseline.pth
-inference.py
+#inference.py
 prepare_samples.sh
 sample_songs.json
+/tmp*

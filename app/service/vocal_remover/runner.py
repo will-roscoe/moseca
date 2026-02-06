@@ -1,14 +1,14 @@
 import os
 import logging
+
 import librosa
 import numpy as np
 import soundfile as sf
 import torch
-from stqdm import stqdm
-import streamlit as st
+from tqdm import tqdm
 from pydub import AudioSegment
 
-from app.service.vocal_remover import nets
+from . import nets
 
 
 if os.environ.get("LIMIT_CPU", False):
@@ -110,10 +110,8 @@ class Separator(object):
         with torch.no_grad():
             mask = []
             # To reduce the overhead, dataloader is not used.
-            for i in stqdm(
+            for i in tqdm(
                 range(0, patches, self.batchsize),
-                st_container=self.progress_bar,
-                gui=False,
             ):
                 X_batch = X_dataset[i : i + self.batchsize]
                 X_batch = torch.from_numpy(X_batch).to(self.device)
@@ -158,23 +156,31 @@ class Separator(object):
 
         return y_spec, v_spec
 
-
-@st.cache_resource(show_spinner=False)
-def load_model(pretrained_model, n_fft=2048):
+def load_model(pretrained_model, n_fft=2048,dev=None):
     model = nets.CascadedNet(n_fft, 32, 128)
-    if torch.cuda.is_available():
-        device = torch.device("cuda:0")
-        model.to(device)
-    # elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
-    #     device = torch.device("mps")
-    #     model.to(device)
-    else:
-        device = torch.device("cpu")
+    if dev is not None:
+        if not isinstance(dev,torch.device):
+            try:
+                device = torch.device(dev)
+            except Exception as e:
+                logging.warning(f"failed to interpret device {dev}, defaulting... ({e})")
+                dev = None
+        else:
+            device = dev
+    if dev is None:
+        if torch.cuda.is_available():
+            device = torch.device("cuda:0")
+        # elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        #     device = torch.device("mps")
+        #     model.to(device)
+        else:
+            device = torch.device("cpu")
+    model.to(device)
+
     model.load_state_dict(torch.load(pretrained_model, map_location=device))
     return model, device
 
 
-# @st.cache_data(show_spinner=False)
 def separate(
     input,
     model,
